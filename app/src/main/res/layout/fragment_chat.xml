@@ -5,6 +5,7 @@
     android:background="@color/background_gray"
     tools:context="com.neverworker.oknow.MainActivity$ChatFragment" >
 	<RelativeLayout
+        android:id="@+id/chat_bg_layout"
 	    android:layout_width="match_parent"
 	    android:layout_height="match_parent"
 	    android:background="@drawable/chat_background"    
@@ -80,28 +81,6 @@
 				    	        >
 
 			    	        </RelativeLayout>
-			    	</LinearLayout>	    	        
-			    	<LinearLayout
-			    	    android:id="@+id/chat_tab_know_area"
-		    	        android:layout_width="fill_parent"
-				    	android:layout_height="wrap_content"
-				    	android:orientation="horizontal"
-			    	    >
-			    	    <View
-			    	        android:layout_width="fill_parent"
-					    	android:layout_height="wrap_content"
-							android:layout_weight="1"
-			    	        />
-			    	    <TextView
-			    	        android:layout_width="fill_parent"
-					    	android:layout_height="wrap_content"
-							android:layout_weight="1"
-							android:background="@drawable/chat_category_title_bg"
-							android:gravity="center"
-							android:textSize="18sp"
-							android:textColor="@android:color/white"
-							android:text="@string/chat_know_title"
-			    	        />
 			    	</LinearLayout>
 		    	    <LinearLayout
 		    	        android:id="@+id/chat_know_list"
@@ -113,41 +92,5 @@
 	    	    </LinearLayout>
 			</com.neverworker.oknow.widget.BlurScrollView>	
 		</android.support.v4.widget.SwipeRefreshLayout>
-		<RelativeLayout
-		    android:id="@+id/chat_gotop_bar"
-		    android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-		    >
-    	    <LinearLayout
-    	        android:layout_width="fill_parent"
-		    	android:layout_height="wrap_content"
-		    	android:orientation="horizontal"
-	    	    >
-	    	    <View
-	    	        android:layout_width="fill_parent"
-			    	android:layout_height="wrap_content"
-					android:layout_weight="1"
-	    	        />
-	    	    <TextView
-	    	        android:id="@+id/chat_gotop_title"
-	    	        android:layout_width="fill_parent"
-			    	android:layout_height="wrap_content"
-					android:layout_weight="1"
-					android:background="@drawable/chat_category_title_bg"
-					android:gravity="center"
-					android:textSize="18sp"
-					android:textColor="@android:color/white"
-					android:text="@string/chat_gotopbar_default"
-	    	        />
-	    	</LinearLayout>	
-	    	<ImageView
-		        android:contentDescription="@string/imageview"
-	    	    android:id="@+id/chat_gotop_button"
-		    	android:layout_width="wrap_content"
-				android:layout_height="50dip"
-				android:layout_centerHorizontal="true"
-				android:src="@drawable/chat_gotop_button"
-	    	    />
-	    </RelativeLayout>
 	</RelativeLayout>
 </com.neverworker.oknow.widget.PercentAnimFrameLayout>
