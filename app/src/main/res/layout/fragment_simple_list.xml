@@ -1,0 +1,52 @@
+<com.neverworker.oknow.widget.PercentAnimFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_gray"
+    tools:context="com.neverworker.oknow.MainActivity$SimpleListFragment">
+	<LinearLayout
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent"
+	    android:orientation="vertical"
+	    android:background="@drawable/simple_list_bg"    
+	    >
+	
+	    <RelativeLayout 
+	    	android:layout_width="match_parent"
+	    	android:layout_height="wrap_content"
+	    	android:orientation="horizontal"
+	    	android:background="#FFEAEAEA"
+	    	>
+	    	<TextView 
+				android:id="@+id/simple_list_back"
+				android:layout_centerVertical="true"
+		    	android:layout_width="wrap_content"
+	    		android:layout_height="wrap_content"
+	    		android:padding="8dip"
+	    		android:gravity="center|left"
+	    		android:textColor="#4455FF"
+	    		android:textSize="22sp"
+	    		android:text="@string/simplelist_back"
+	    	    />
+	    	<TextView 
+				android:id="@+id/simple_list_title"
+		    	android:layout_width="match_parent"
+	    		android:layout_height="wrap_content"
+	    		android:layout_gravity="center"
+	    		android:padding="10dip"
+	    		android:gravity="center"
+	    		android:textSize="28sp"
+	    		android:text="@string/simplelist_title"
+	    	    />
+	    	
+	    </RelativeLayout>
+	    
+		<ListView
+		    android:id="@+id/simple_list_container"
+		    android:layout_width="match_parent"
+		    android:layout_height="match_parent"
+		    >
+	
+		</ListView>	
+	</LinearLayout>
+</com.neverworker.oknow.widget.PercentAnimFrameLayout>
