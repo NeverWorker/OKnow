@@ -52,8 +52,8 @@
 					    	        android:textColor="#FFFFFFFF"
 					    	        android:textSize="20sp"
 					    	        android:text="@string/chat_default_weather"
-					    	        android:shadowColor="@android:color/black"
-					    	        android:shadowRadius="5"
+                                    android:shadowColor="@android:color/black"
+                                    android:shadowRadius="5"
 			    	                />
 			    	            <TextView 
 			    	                android:id="@+id/chat_weather_icon"
@@ -78,8 +78,43 @@
 				    	        android:layout_height="match_parent"
 				    	        android:layout_weight="3"
 				    	        android:orientation="vertical"
+                                android:paddingBottom="8dip"
 				    	        >
-
+                                <TextView
+                                    android:id="@+id/chat_psi_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentTop="true"
+                                    android:textColor="#FFFFFFFF"
+                                    android:textSize="20sp"
+                                    android:text="@string/chat_default_psi"
+                                    android:shadowColor="@android:color/black"
+                                    android:shadowRadius="5"
+                                    />
+                                <TextView
+                                    android:id="@+id/chat_msv_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_below="@+id/chat_psi_text"
+                                    android:layout_above="@+id/chat_uvi_text"
+                                    android:gravity="center_vertical"
+                                    android:textColor="#FFFFFFFF"
+                                    android:textSize="20sp"
+                                    android:text="@string/chat_default_msv"
+                                    android:shadowColor="@android:color/black"
+                                    android:shadowRadius="5"
+                                    />
+                                <TextView
+                                    android:id="@+id/chat_uvi_text"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_alignParentBottom="true"
+                                    android:textColor="#FFFFFFFF"
+                                    android:textSize="20sp"
+                                    android:text="@string/chat_default_uvi"
+                                    android:shadowColor="@android:color/black"
+                                    android:shadowRadius="5"
+                                    />
 			    	        </RelativeLayout>
 			    	</LinearLayout>
 		    	    <LinearLayout

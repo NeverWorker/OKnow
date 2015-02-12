@@ -19,12 +19,15 @@
 	<string name="signup_success">註冊成功</string>
 	<string name="signup_failure">註冊失敗</string>
 	
-	<string name="maintab_chat"></string>
-	<string name="maintab_map"></string>
-	<string name="maintab_info"></string>
-	<string name="maintab_setting"></string>
-	
-	<string name="chat_default_weather">-</string>
+	<string name="maintab_chat">首頁</string>
+	<string name="maintab_map">地圖</string>
+	<string name="maintab_info">資訊</string>
+	<string name="maintab_setting">設定</string>
+
+    <string name="chat_default_weather">-</string>
+    <string name="chat_default_uvi">UVI:\n  -</string>
+    <string name="chat_default_psi">PSI:\n  -</string>
+    <string name="chat_default_msv">mSv:\n  -</string>
 	<string name="chat_know_tab">- 附近發生</string>
 	<string name="chat_know_title">附近該注意的事</string>
 	<string name="chat_gotopbar_default">附近景點</string>

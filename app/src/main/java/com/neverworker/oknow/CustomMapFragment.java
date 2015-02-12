@@ -1,8 +1,11 @@
 package com.neverworker.oknow;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import com.google.gson.JsonParser;
 import com.neverworker.oknow.KnowManager.OnKnowListChangedListener;
 import com.neverworker.oknow.KnowManager.OnWeatherChangedListener;
 
@@ -19,6 +22,7 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.neverworker.oknow.common.FileManager;
 import com.parse.ParseGeoPoint;
 import com.parse.ParseObject;
 
@@ -47,20 +51,23 @@ public class CustomMapFragment extends Fragment {
 	private OnKnowListChangedListener knowListener;
 	private OnWeatherChangedListener weatherListener;
 
+    private static JsonArray refugeeData;
+    private ArrayList<JsonObject> nearRefugeeData = new ArrayList<JsonObject>();
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		thisActivity = (MainActivity) getActivity();
 		if (rootView == null)
 			rootView = inflater.inflate(R.layout.fragment_map, container, false);
-		
-		if (map == null) {
+
+        if (map == null) {
 			map = ((MapFragment) this.getActivity().getFragmentManager().findFragmentById(R.id.google_map)).getMap();
 	        map.setMyLocationEnabled(true);
 	        map.getUiSettings().setZoomControlsEnabled(false);
 	        map.getUiSettings().setMyLocationButtonEnabled(false);
 
 	        focusMyLocation();
-		}
+        }
 		
         TextView buttonWhere = (TextView) rootView.findViewById(R.id.map_where_am_i);
         buttonWhere.setOnClickListener(new OnClickListener() {
@@ -138,7 +145,41 @@ public class CustomMapFragment extends Fragment {
 			}
 			thisActivity.getKnowManager().setOnWeatherChangedListener(weatherListener);
 		}
-        
+
+        if (refugeeData == null) {
+            try {
+                InputStream is = thisActivity.getAssets().open("embedData/refugee.json");
+                refugeeData = new JsonParser().parse(FileManager.ReadInputStreamToStr(is, "UTF-8")).getAsJsonArray();
+                nearRefugeeData.clear();
+                for (JsonElement oriJEle : refugeeData) {
+                    JsonObject newJObj = oriJEle.getAsJsonObject();
+                    if (!newJObj.has("location"))
+                        continue;
+                    if (nearRefugeeData.size() < 10) {
+                        nearRefugeeData.add(newJObj);
+                    } else {
+                        int fixIndex = -1;
+                        for (JsonObject oriJObj : nearRefugeeData) {
+                            if (KnowManager.compareLocLatLngL(thisActivity.getKnowManager().getLocation(),
+                                    newJObj.get("location").getAsJsonObject(),
+                                    oriJObj.get("location").getAsJsonObject())) {
+                                fixIndex = nearRefugeeData.indexOf(oriJObj);
+                                break;
+                            }
+                        }
+                        if (fixIndex != -1) {
+                            nearRefugeeData.remove(fixIndex);
+                            nearRefugeeData.add(fixIndex, newJObj);
+                        }
+
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        updateRefugeeList(nearRefugeeData);
+
 		return rootView;
 	}
 	
@@ -201,13 +242,13 @@ public class CustomMapFragment extends Fragment {
 		}
 	}
 	
-	private void updateGooglePlaceList(JsonArray list) {
-		map.clear();
-		markerPlaceMap.clear();
-		for (JsonElement jEle : list) {
-			JsonObject jObj = jEle.getAsJsonObject();
-			Marker marker = addMarker(jObj);
-			markerPlaceMap.put(marker, jObj);
+	private void updateRefugeeList(ArrayList<JsonObject> list) {
+		//map.clear();
+		//markerPlaceMap.clear();
+		for (JsonObject jObj : list) {
+			Marker marker = addRefugeeMarker(jObj);
+            //if (marker != null) {
+    		//	markerPlaceMap.put(marker, jObj);
 		}
 	}
 	
@@ -217,5 +258,28 @@ public class CustomMapFragment extends Fragment {
 		String weatherStr = jsonObj.get("weather").getAsJsonArray().get(0).getAsJsonObject().get("description").getAsString();
 		weatherView.setText(weatherStr);
 	}
-	
+
+
+    private Marker addRefugeeMarker(JsonObject jObj) {
+        if (!jObj.has("location"))
+            return null;
+        JsonObject geoLoc = jObj.get("location").getAsJsonObject();
+        if (!geoLoc.has("latitude") || !geoLoc.has("longitude"))
+            return null;
+        LatLng location = new LatLng(geoLoc.get("latitude").getAsDouble(), geoLoc.get("longitude").getAsDouble());
+
+        String title = jObj.get("name").getAsString() + "(避難所)";
+        String iconText = title.split("\n")[0];
+        if (iconText.length() > 12)
+            iconText = iconText.substring(0, 11) + "...";
+        IconGenerator tc = new IconGenerator(thisActivity);
+        tc.setTextAppearance(R.style.iconGenRefugeeText);
+//        tc.setColor(Color.parseColor("#633300"));
+        Bitmap bmp = tc.makeIcon(iconText);
+        Marker marker = map.addMarker(new MarkerOptions().position(location).title(title));
+        marker.setIcon(BitmapDescriptorFactory.fromBitmap(bmp));
+
+        return marker;
+    }
+
 }

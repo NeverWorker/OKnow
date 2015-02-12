@@ -1,9 +1,12 @@
 package com.neverworker.oknow.common;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
@@ -53,4 +56,21 @@ public class FileManager {
 		Bitmap bitmap = BitmapFactory.decodeFile(localPath + "/" + filename, options);
 		return bitmap;
 	}
+
+    public static String ReadInputStreamToStr(InputStream fileIs, String encoding) {
+        StringBuilder dataStr = new StringBuilder();
+
+        try {
+            BufferedReader bw = new BufferedReader(new InputStreamReader(fileIs, encoding));
+            String lineData;
+            while ((lineData = bw.readLine()) != null) {
+                dataStr.append(lineData + "\n");
+            }
+            bw.close();
+        } catch(IOException ex) {
+            ex.printStackTrace();
+        }
+
+        return dataStr.toString();
+    }
 }

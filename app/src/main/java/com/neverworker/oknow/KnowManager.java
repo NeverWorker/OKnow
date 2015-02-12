@@ -26,9 +26,12 @@ import com.facebook.internal.ImageRequest;
 import com.facebook.model.GraphUser;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import com.neverworker.oknow.common.CsvToJson;
+import com.neverworker.oknow.common.FileManager;
 import com.parse.FunctionCallback;
 import com.parse.ParseCloud;
 import com.parse.ParseException;
@@ -38,34 +41,35 @@ import com.parse.ParseObject;
 import com.parse.ParseTwitterUtils;
 import com.parse.ParseUser;
 
+import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.os.AsyncTask;
 
 public class KnowManager {
-	private String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&lang=zh_tw";
+	private static final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&lang=zh_tw";
 	private ArrayList<OnKnowListChangedListener> knowListListeners = new ArrayList<OnKnowListChangedListener>();
-	private ArrayList<OnWeatherChangedListener> weatherListeners = new ArrayList<OnWeatherChangedListener>();
+    private ArrayList<OnWeatherChangedListener> weatherListeners = new ArrayList<OnWeatherChangedListener>();
+    private Activity mActivity;
 	private LocationHelper locHelper;
-	
-	private ArrayList<ParseObject> knowList = new ArrayList<ParseObject>();
+
+    private ArrayList<ParseObject> knowList = new ArrayList<ParseObject>();
 	private HashMap<String, Object> personalData = new HashMap<String, Object>();
 	
 	private static final int VOICE_UPDATE_INTERVAL = 10000;
 	private static final int PERSONAL_UPDATE_INTERVAL = 60000;
-	private static final int WEATHER_UPDATE_INTERVAL = 60000;
+    private static final int WEATHER_UPDATE_INTERVAL = 60000;
 	private long knowLastUpdate;
 	private long personalLastUpdate;
-	private long weatherUpdate;
+    private long weatherUpdate;
 	private boolean knowUpdating;
-	private boolean foodUpdating;
-	private boolean nearbyUpdating;
-	private boolean weatherUpdating;
+    private boolean weatherUpdating;
 
-	private JsonObject weatherData;
-	
-	public KnowManager(MainActivity mActivity, LocationHelper lh) {
+    private JsonObject weatherData;
+
+	public KnowManager(MainActivity activity, LocationHelper lh) {
+        mActivity = activity;
 		locHelper = lh;
 		
 		Session session = ParseFacebookUtils.getSession();
@@ -135,6 +139,9 @@ public class KnowManager {
 	public void updateLocRef() {
 		updateKnowList();
 		updateWeather();
+        updateUVI();
+        updatePSI();
+        updateMSV();
 	}
 	
 	public void updateDistance() {
@@ -160,7 +167,7 @@ public class KnowManager {
 			listener.onChanged(weatherData);
 		}
 	}
-	
+
 	public ArrayList<ParseObject> getKnowList() {
 		if (knowLastUpdate + VOICE_UPDATE_INTERVAL > System.currentTimeMillis()) 
 	        return knowList;
@@ -314,6 +321,7 @@ public class KnowManager {
 		//updateWeather();
 		return weatherData;
 	}
+
 	public void updateWeather() {
 		Location loc = getLocation();
 		if (loc == null)
@@ -323,15 +331,15 @@ public class KnowManager {
 		weatherUpdating = true;
 		
 		new LoadWebTask() {
-			protected void onPostExecute(JsonObject result) {
-				weatherData = result;
+			protected void onPostExecute(Object result) {
+				weatherData = ((JsonElement)result).getAsJsonObject();
 				weatherUpdate = System.currentTimeMillis();
 				weatherNotification();
 				weatherUpdating = false;
 			}
-		}.execute(String.format(WEATHER_URL, loc.getLatitude(), loc.getLongitude()));
+		}.execute(String.format(WEATHER_URL, loc.getLatitude(), loc.getLongitude()), "JSON");
 	}
-	
+
 	public void setOnWeatherChangedListener(OnWeatherChangedListener listener) {
 		if (weatherListeners.contains(listener) == false)
 			weatherListeners.add(listener);
@@ -341,16 +349,15 @@ public class KnowManager {
 		void onChanged(JsonObject array);
 	}
 	
-	private class LoadWebTask extends AsyncTask<String, Void, JsonObject> {
-		public String loadHtml(String urlPath) throws IOException {
+	private class LoadWebTask extends AsyncTask<String, Void, Object> {
+		public String loadHtml(String urlPath, String encoding) throws IOException {
 			StringBuilder result = new StringBuilder();
 
 			URL url = new URL(urlPath);
 			HttpURLConnection connection = null;
-			connection = (HttpURLConnection)url.openConnection();		
+			connection = (HttpURLConnection)url.openConnection();
 			connection.setRequestMethod("GET");
-			connection.setDoOutput(true);
-			
+
 			if (connection.getResponseCode() != 200) {
 				return "{error:" + connection.getResponseCode() + "}";
 			}
@@ -360,7 +367,7 @@ public class KnowManager {
 			String line; 
 
 			is = connection.getInputStream();
-			rd = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+			rd = new BufferedReader(new InputStreamReader(is, encoding));
 
 			while((line = rd.readLine()) != null) {
 				result.append(line+"\n");
@@ -373,10 +380,14 @@ public class KnowManager {
 		}
 		
 		@Override
-		protected JsonObject doInBackground(String... params) {
+		protected Object doInBackground(String... params) {
+            String encoding = params.length > 2 ? params[2] : "UTF-8";
 			JsonParser parser = new JsonParser();
 			try {
-				return parser.parse(loadHtml(params[0])).getAsJsonObject();
+                if (params[1].equals("JSON"))
+    				return parser.parse(loadHtml(params[0], encoding));
+                else
+                    return loadHtml(params[0], encoding);
 			} catch (JsonSyntaxException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -385,8 +396,248 @@ public class KnowManager {
 			return null;
 		}
 	}
-	
-	
+
+    private static final String UVI_URL = "http://opendata.epa.gov.tw/ws/Data/UV/?$orderby=PublishAgency&$skip=0&$top=1000&format=json";
+    private ArrayList<OnUVIChangedListener> uviListeners = new ArrayList<OnUVIChangedListener>();
+    private static final int UVI_UPDATE_INTERVAL = 60000;
+    private long uviUpdate;
+    private boolean uviUpdating;
+    private JsonObject uviData;
+    private void uviNotification() {
+        for (OnUVIChangedListener listener : uviListeners) {
+            listener.onChanged(uviData);
+        }
+    }
+    public JsonObject getUVI() {
+        if (uviUpdate + UVI_UPDATE_INTERVAL > System.currentTimeMillis())
+            return uviData;
+        //updateUvi();
+        return uviData;
+    }
+    public void updateUVI() {
+        Location loc = getLocation();
+        if (loc == null)
+            return;
+        if (uviUpdating)
+            return;
+        uviUpdating = true;
+
+        new LoadWebTask() {
+            private boolean compareLoc(Location mLoc, JsonObject o1, JsonObject o2) {
+                double lat1 = Double.parseDouble(o1.get("TWD97Lat").getAsString().replace(".",",").replaceFirst(",",".").replace(",",""));
+                double lng1 = Double.parseDouble(o1.get("TWD97Lon").getAsString().replace(".",",").replaceFirst(",",".").replace(",",""));
+                double lat2 = Double.parseDouble(o2.get("TWD97Lat").getAsString().replace(".",",").replaceFirst(",",".").replace(",",""));
+                double lng2 = Double.parseDouble(o2.get("TWD97Lon").getAsString().replace(".",",").replaceFirst(",",".").replace(",",""));
+
+                double mLat = mLoc.getLatitude();
+                double mLng = mLoc.getLongitude();
+
+                return (((lat1-mLat)*(lat1-mLat)+(lng1-mLng)*(lng1-mLng)) < ((lat2-mLat)*(lat2-mLat)+(lng2-mLng)*(lng2-mLng)));
+            }
+
+            protected void onPostExecute(Object result) {
+                JsonArray uviArray = ((JsonElement)result).getAsJsonArray();
+                uviData = uviArray.get(0).getAsJsonObject();
+                for (JsonElement jEle : uviArray) {
+                    JsonObject jObj = jEle.getAsJsonObject();
+                    if (compareLoc(getLocation(), jObj, uviData)) {
+                        uviData = jObj;
+                    }
+                }
+
+                uviUpdate = System.currentTimeMillis();
+                uviNotification();
+                uviUpdating = false;
+            }
+        }.execute(UVI_URL, "JSON");
+    }
+    public void setOnUVIChangedListener(OnUVIChangedListener listener) {
+        if (uviListeners.contains(listener) == false)
+            uviListeners.add(listener);
+    }
+    public interface OnUVIChangedListener  extends EventListener {
+        void onChanged(JsonObject array);
+    }
+
+
+    private static final String PSI_URL = "http://opendata.epa.gov.tw/ws/Data/AQX/?$orderby=SiteName&$skip=0&$top=1000&format=json";
+    private static final String PSI_SITE_URL = "http://opendata.epa.gov.tw/ws/Data/AQXSite/?$orderby=SiteName&$skip=0&$top=1000&format=json";
+    private ArrayList<OnPSIChangedListener> psiListeners = new ArrayList<OnPSIChangedListener>();
+    private static final int PSI_UPDATE_INTERVAL = 60000;
+    private long psiUpdate;
+    private boolean psiUpdating;
+    private JsonObject psiData;
+    private void psiNotification() {
+        for (OnPSIChangedListener listener : psiListeners) {
+            listener.onChanged(psiData);
+        }
+    }
+    public JsonObject getPSI() {
+        if (psiUpdate + PSI_UPDATE_INTERVAL > System.currentTimeMillis())
+            return psiData;
+        //updatePsi();
+        return psiData;
+    }
+    public void updatePSI() {
+        Location loc = getLocation();
+        if (loc == null)
+            return;
+        if (psiUpdating)
+            return;
+        psiUpdating = true;
+
+        new LoadWebTask() {
+            protected void onPostExecute(final Object siteResult) {
+                new LoadWebTask() {
+                    protected void onPostExecute(Object result) {
+                        JsonArray psiSiteArray = ((JsonElement)siteResult).getAsJsonArray();
+                        JsonObject psiSiteData = psiSiteArray.get(0).getAsJsonObject();
+                        for (JsonElement jEle : psiSiteArray) {
+                            JsonObject jObj = jEle.getAsJsonObject();
+                            if (compareLocTWD97(getLocation(), jObj, psiSiteData)) {
+                                psiSiteData = jObj;
+                            }
+                        }
+
+                        JsonArray psiArray = ((JsonElement)result).getAsJsonArray();
+                        for (JsonElement jEle : psiArray) {
+                            JsonObject jObj = jEle.getAsJsonObject();
+                            if (jObj.get("SiteName").equals(psiSiteData.get("SiteName"))) {
+                                psiData = jObj;
+                                break;
+                            }
+                        }
+
+                        psiUpdate = System.currentTimeMillis();
+                        psiNotification();
+                        psiUpdating = false;
+
+                    }
+                }.execute(PSI_URL, "JSON");
+            }
+        }.execute(PSI_SITE_URL, "JSON");
+    }
+    public void setOnPSIChangedListener(OnPSIChangedListener listener) {
+        if (psiListeners.contains(listener) == false)
+            psiListeners.add(listener);
+    }
+    public interface OnPSIChangedListener  extends EventListener {
+        void onChanged(JsonObject array);
+    }
+
+
+    private static final String MSV_URL = "http://www.aec.gov.tw/dataopen/index.php?id=2";
+    private ArrayList<OnMSVChangedListener> msvListeners = new ArrayList<OnMSVChangedListener>();
+    private static final int MSV_UPDATE_INTERVAL = 60000;
+    private long msvUpdate;
+    private boolean msvUpdating;
+    private JsonObject msvData;
+    private boolean firstFetch = true;
+    private JsonArray msvSiteArr;
+    private void msvNotification() {
+        for (OnMSVChangedListener listener : msvListeners) {
+            listener.onChanged(msvData);
+        }
+    }
+    public JsonObject getMSV() {
+        if (msvUpdate + MSV_UPDATE_INTERVAL > System.currentTimeMillis())
+            return msvData;
+        //updateMsv();
+        return msvData;
+    }
+    public void updateMSV() {
+        Location loc = getLocation();
+        if (loc == null)
+            return;
+        if (msvUpdating)
+            return;
+        msvUpdating = true;
+
+        new LoadWebTask() {
+            protected void onPostExecute(Object result) {
+                String data = (String)result;
+                CsvToJson ctj = new CsvToJson();
+                ctj.init("name,ename,MSV,date");
+
+                if (firstFetch) {
+                    try {
+                        InputStream is = mActivity.getAssets().open("embedData/msvsite.json");
+                        msvSiteArr = new JsonParser().parse(FileManager.ReadInputStreamToStr(is, "UTF-8")).getAsJsonArray();
+                        firstFetch = false;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                JsonObject nearSite = msvSiteArr.get(0).getAsJsonObject();
+                for (JsonElement jEle : msvSiteArr) {
+                    JsonObject jObj = jEle.getAsJsonObject();
+                    if (compareLocLatLng(getLocation(), jObj, nearSite)) {
+                        nearSite = jObj;
+                    }
+                }
+
+                JsonArray msvArray = ctj.parse(true, data);
+                for (JsonElement jEle : msvArray) {
+                    JsonObject jObj = jEle.getAsJsonObject();
+                    if (jObj.get("name").equals(nearSite.get("name"))) {
+                        msvData = jObj;
+                        break;
+                    }
+                }
+
+                msvUpdate = System.currentTimeMillis();
+                msvNotification();
+                msvUpdating = false;
+
+            }
+        }.execute(MSV_URL, "HTML", "BIG5");
+    }
+    public void setOnMSVChangedListener(OnMSVChangedListener listener) {
+        if (msvListeners.contains(listener) == false)
+            msvListeners.add(listener);
+    }
+    public interface OnMSVChangedListener  extends EventListener {
+        void onChanged(JsonObject array);
+    }
+
+
+    public static boolean compareLocTWD97(Location mLoc, JsonObject o1, JsonObject o2) {
+        double lat1 = Double.parseDouble(o1.get("TWD97Lat").getAsString());
+        double lng1 = Double.parseDouble(o1.get("TWD97Lon").getAsString());
+        double lat2 = Double.parseDouble(o2.get("TWD97Lat").getAsString());
+        double lng2 = Double.parseDouble(o2.get("TWD97Lon").getAsString());
+
+        double mLat = mLoc.getLatitude();
+        double mLng = mLoc.getLongitude();
+
+        return (((lat1-mLat)*(lat1-mLat)+(lng1-mLng)*(lng1-mLng)) < ((lat2-mLat)*(lat2-mLat)+(lng2-mLng)*(lng2-mLng)));
+    }
+
+    public static boolean compareLocLatLng(Location mLoc, JsonObject o1, JsonObject o2) {
+        double lat1 = Double.parseDouble(o1.get("lat").getAsString());
+        double lng1 = Double.parseDouble(o1.get("lng").getAsString());
+        double lat2 = Double.parseDouble(o2.get("lat").getAsString());
+        double lng2 = Double.parseDouble(o2.get("lng").getAsString());
+
+        double mLat = mLoc.getLatitude();
+        double mLng = mLoc.getLongitude();
+
+        return (((lat1-mLat)*(lat1-mLat)+(lng1-mLng)*(lng1-mLng)) < ((lat2-mLat)*(lat2-mLat)+(lng2-mLng)*(lng2-mLng)));
+    }
+
+    public static boolean compareLocLatLngL(Location mLoc, JsonObject o1, JsonObject o2) {
+        double lat1 = Double.parseDouble(o1.get("latitude").getAsString());
+        double lng1 = Double.parseDouble(o1.get("longitude").getAsString());
+        double lat2 = Double.parseDouble(o2.get("latitude").getAsString());
+        double lng2 = Double.parseDouble(o2.get("longitude").getAsString());
+
+        double mLat = mLoc.getLatitude();
+        double mLng = mLoc.getLongitude();
+
+        return (((lat1-mLat)*(lat1-mLat)+(lng1-mLng)*(lng1-mLng)) < ((lat2-mLat)*(lat2-mLat)+(lng2-mLng)*(lng2-mLng)));
+    }
+
+
 	public class Know {
 		private ParseObject parseObj;
 		public Know(ParseObject pObj) {

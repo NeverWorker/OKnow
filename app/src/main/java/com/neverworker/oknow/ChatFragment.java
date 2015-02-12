@@ -4,6 +4,9 @@ import java.util.ArrayList;
 
 import com.neverworker.oknow.KnowManager.OnKnowListChangedListener;
 import com.neverworker.oknow.KnowManager.OnWeatherChangedListener;
+import com.neverworker.oknow.KnowManager.OnUVIChangedListener;
+import com.neverworker.oknow.KnowManager.OnPSIChangedListener;
+import com.neverworker.oknow.KnowManager.OnMSVChangedListener;
 import com.neverworker.oknow.text.WeatherIconMapping;
 import com.neverworker.oknow.widget.BlurScrollView;
 import com.neverworker.oknow.widget.BlurScrollView.OnScrollChangedListener;
@@ -39,13 +42,19 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     private View rootView;
 
 	private TextView weatherIcon;
-	private TextView weatherText;
+    private TextView weatherText;
+    private TextView uviText;
+    private TextView psiText;
+    private TextView msvText;
 
     private LinearLayout knowList;
 
 	private OnKnowListChangedListener knowListener;
-	private OnWeatherChangedListener weatherListener;
-	
+    private OnWeatherChangedListener weatherListener;
+    private OnUVIChangedListener uviListener;
+    private OnPSIChangedListener psiListener;
+    private OnMSVChangedListener msvListener;
+
 	private Resources res;
 	
 	public ChatFragment() {
@@ -79,6 +88,57 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
 			}
 			thisActivity.getKnowManager().setOnWeatherChangedListener(weatherListener);
 		}
+
+        uviText = (TextView)rootView.findViewById(R.id.chat_uvi_text);
+        JsonObject uviData = thisActivity.getKnowManager().getUVI();
+        if (uviData != null) {
+            updateUVI(uviData);
+        } else {
+            if (uviListener == null) {
+                uviListener = new OnUVIChangedListener() {
+                    @Override
+                    public void onChanged(JsonObject array) {
+                        if (array != null)
+                            updateUVI(array);
+                    }
+                };
+            }
+            thisActivity.getKnowManager().setOnUVIChangedListener(uviListener);
+        }
+
+        psiText = (TextView)rootView.findViewById(R.id.chat_psi_text);
+        JsonObject psiData = thisActivity.getKnowManager().getPSI();
+        if (psiData != null) {
+            updatePSI(psiData);
+        } else {
+            if (psiListener == null) {
+                psiListener = new OnPSIChangedListener() {
+                    @Override
+                    public void onChanged(JsonObject array) {
+                        if (array != null)
+                            updatePSI(array);
+                    }
+                };
+            }
+            thisActivity.getKnowManager().setOnPSIChangedListener(psiListener);
+        }
+
+        msvText = (TextView)rootView.findViewById(R.id.chat_msv_text);
+        JsonObject msvData = thisActivity.getKnowManager().getMSV();
+        if (msvData != null) {
+            updateMSV(msvData);
+        } else {
+            if (msvListener == null) {
+                msvListener = new OnMSVChangedListener() {
+                    @Override
+                    public void onChanged(JsonObject array) {
+                        if (array != null)
+                            updateMSV(array);
+                    }
+                };
+            }
+            thisActivity.getKnowManager().setOnMSVChangedListener(msvListener);
+        }
 		
 		swipeLayout = (SwipeRefreshLayout) rootView.findViewById(R.id.chat_swipe_container);
 		swipeLayout.getBackground().setAlpha(0);
@@ -231,12 +291,69 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
 	}
 	
 	private void updateWeather(JsonObject jsonObj) {
+        if (jsonObj == null)
+            return;
 		JsonObject weatherObj = jsonObj.get("weather").getAsJsonArray().get(0).getAsJsonObject();
 		String weatherStr = weatherObj.get("description").getAsString();
 		String weatherIconNum = weatherObj.get("icon").getAsString();
 		weatherText.setText(weatherStr);
 		weatherIcon.setText(WeatherIconMapping.weatherToIcon(weatherIconNum));
 	}
+
+    private void updateUVI(JsonObject uviObj) {
+        if (uviObj == null)
+            return;
+        String uviStr = String.format("UVI:\n  %s", uviObj.get("UVI").getAsString());
+        double uvi = Double.parseDouble(uviObj.get("UVI").getAsString());
+        if (uvi >= 0 && uvi <= 2)
+            uviText.setTextColor(Color.parseColor("#00FF00"));
+        else if (uvi < 6)
+            uviText.setTextColor(Color.parseColor("#FFFF00"));
+        else if (uvi < 8)
+            uviText.setTextColor(Color.parseColor("#E5891A"));
+        else if (uvi < 11)
+            uviText.setTextColor(Color.parseColor("#FF0000"));
+        else
+            uviText.setTextColor(Color.parseColor("#B066A0"));
+
+        uviText.setText(uviStr);
+    }
+
+    private void updatePSI(JsonObject psiObj) {
+        if (psiObj == null)
+            return;
+        String psiStr = String.format("PSI:\n  %s", psiObj.get("PSI").getAsString());
+        double psi = Double.parseDouble(psiObj.get("PSI").getAsString());
+        if (psi >= 0 && psi <= 50)
+            psiText.setTextColor(Color.parseColor("#00FF00"));
+        else if (psi <= 100)
+            psiText.setTextColor(Color.parseColor("#FFFF00"));
+        else if (psi < 200)
+            psiText.setTextColor(Color.parseColor("#FF0000"));
+        else if (psi < 300)
+            psiText.setTextColor(Color.parseColor("#800080"));
+        else if (psi >= 300)
+            psiText.setTextColor(Color.parseColor("#633300"));
+        else
+            psiText.setTextColor(Color.parseColor("#000000"));
+
+        psiText.setText(psiStr);
+    }
+
+    private void updateMSV(JsonObject msvObj) {
+        if (msvObj == null)
+            return;
+        String msvStr = String.format("mSv:\n  %s", msvObj.get("MSV").getAsString());
+        double msv = Double.parseDouble(msvObj.get("MSV").getAsString());
+        if (msv >= 0 && msv <= 0.2)
+            msvText.setTextColor(Color.parseColor("#00FF00"));
+        else if (msv <= 20)
+            msvText.setTextColor(Color.parseColor("#FFFF00"));
+        else
+            msvText.setTextColor(Color.parseColor("#FF0000"));
+
+        msvText.setText(msvStr);
+    }
 
     private boolean isWarning = false;
     private boolean toBeWarning = false;

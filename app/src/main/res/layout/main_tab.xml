@@ -8,8 +8,8 @@
     <LinearLayout
         android:id="@+id/main_tab_chat"
         android:layout_height="match_parent"
-        android:layout_width="match_parent"
-        android:layout_weight="1"
+        android:layout_width="0dip"
+        android:layout_weight="0.2"
 	    android:layout_gravity="center|bottom"
 	    android:orientation="vertical" 
         >
@@ -40,8 +40,8 @@
     <LinearLayout
         android:id="@+id/main_tab_map"
         android:layout_height="match_parent"
-        android:layout_width="match_parent"
-        android:layout_weight="1"
+        android:layout_width="0dip"
+        android:layout_weight=".2"
 	    android:layout_gravity="center|bottom"
 	    android:orientation="vertical" 
         >
@@ -66,21 +66,22 @@
 	        android:gravity="center"        
 	        android:text="@string/maintab_map"
 	        />        
-    </LinearLayout>	    
+    </LinearLayout>
     <ImageView
         android:contentDescription="@string/imageview"
         android:id="@+id/main_tab_ov"
         android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        android:layout_weight="1"
+        android:layout_width="0dip"
+        android:layout_weight="0.3"
+        android:padding="6dip"
         android:layout_gravity="center"
-        android:src="@drawable/main_tab_ov_off" 
+        android:src="@drawable/main_tab_ov_off"
         />    
     <LinearLayout
         android:id="@+id/main_tab_info"
         android:layout_height="match_parent"
-        android:layout_width="match_parent"
-        android:layout_weight="1"
+        android:layout_width="0dip"
+        android:layout_weight="0.2"
 	    android:layout_gravity="center|bottom"
 	    android:orientation="vertical" 
         >
@@ -110,8 +111,8 @@
     <LinearLayout
         android:id="@+id/main_tab_setting"
         android:layout_height="match_parent"
-        android:layout_width="match_parent"
-        android:layout_weight="1"
+        android:layout_width="0dip"
+        android:layout_weight="0.2"
 	    android:layout_gravity="center|bottom"
 	    android:orientation="vertical" 
         >
