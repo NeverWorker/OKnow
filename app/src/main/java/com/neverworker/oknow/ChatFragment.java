@@ -7,6 +7,7 @@ import com.neverworker.oknow.KnowManager.OnWeatherChangedListener;
 import com.neverworker.oknow.KnowManager.OnUVIChangedListener;
 import com.neverworker.oknow.KnowManager.OnPSIChangedListener;
 import com.neverworker.oknow.KnowManager.OnMSVChangedListener;
+import com.neverworker.oknow.KnowManager.OnAlertChangedListener;
 import com.neverworker.oknow.text.WeatherIconMapping;
 import com.neverworker.oknow.widget.BlurScrollView;
 import com.neverworker.oknow.widget.BlurScrollView.OnScrollChangedListener;
@@ -17,10 +18,12 @@ import com.parse.ParseObject;
 
 import android.annotation.SuppressLint;
 import android.app.Fragment;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -46,6 +49,7 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     private TextView uviText;
     private TextView psiText;
     private TextView msvText;
+    private ImageView alertImg;
 
     private LinearLayout knowList;
 
@@ -54,6 +58,7 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     private OnUVIChangedListener uviListener;
     private OnPSIChangedListener psiListener;
     private OnMSVChangedListener msvListener;
+    private OnAlertChangedListener alertListener;
 
 	private Resources res;
 	
@@ -139,6 +144,31 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
             }
             thisActivity.getKnowManager().setOnMSVChangedListener(msvListener);
         }
+
+        alertImg = (ImageView)rootView.findViewById(R.id.chat_alert_img);
+        JsonObject alertData = thisActivity.getKnowManager().getAlert();
+        if (alertData != null) {
+            updateAlert(alertData);
+        } else {
+            if (alertListener == null) {
+                alertListener = new OnAlertChangedListener() {
+                    @Override
+                    public void onChanged(JsonObject array) {
+                        if (array != null)
+                            updateAlert(array);
+                    }
+                };
+            }
+            thisActivity.getKnowManager().setOnAlertChangedListener(alertListener);
+        }
+        alertImg.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Uri uri = Uri.parse("http://www.cwb.gov.tw/V7/prevent/fifows/index.htm?");
+                Intent i = new Intent(Intent.ACTION_VIEW,uri);
+                startActivity(i);
+            }
+        });
 		
 		swipeLayout = (SwipeRefreshLayout) rootView.findViewById(R.id.chat_swipe_container);
 		swipeLayout.getBackground().setAlpha(0);
@@ -303,7 +333,7 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     private void updateUVI(JsonObject uviObj) {
         if (uviObj == null)
             return;
-        String uviStr = String.format("UVI:\n  %s", uviObj.get("UVI").getAsString());
+        String uviStr =uviObj.get("UVI").getAsString();
         double uvi = Double.parseDouble(uviObj.get("UVI").getAsString());
         if (uvi >= 0 && uvi <= 2)
             uviText.setTextColor(Color.parseColor("#00FF00"));
@@ -322,7 +352,7 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     private void updatePSI(JsonObject psiObj) {
         if (psiObj == null)
             return;
-        String psiStr = String.format("PSI:\n  %s", psiObj.get("PSI").getAsString());
+        String psiStr = psiObj.get("PSI").getAsString();
         double psi = Double.parseDouble(psiObj.get("PSI").getAsString());
         if (psi >= 0 && psi <= 50)
             psiText.setTextColor(Color.parseColor("#00FF00"));
@@ -343,7 +373,7 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
     private void updateMSV(JsonObject msvObj) {
         if (msvObj == null)
             return;
-        String msvStr = String.format("mSv:\n  %s", msvObj.get("MSV").getAsString());
+        String msvStr = msvObj.get("MSV").getAsString();
         double msv = Double.parseDouble(msvObj.get("MSV").getAsString());
         if (msv >= 0 && msv <= 0.2)
             msvText.setTextColor(Color.parseColor("#00FF00"));
@@ -353,6 +383,17 @@ public class ChatFragment extends Fragment implements SwipeRefreshLayout.OnRefre
             msvText.setTextColor(Color.parseColor("#FF0000"));
 
         msvText.setText(msvStr);
+    }
+
+    private void updateAlert(JsonObject alertObj) {
+        if (alertObj == null)
+            return;
+        if (alertObj.get("alert").getAsBoolean())
+            alertImg.setVisibility(View.VISIBLE);
+        else
+            alertImg.setVisibility(View.GONE);
+
+        //alertText.setText(alertStr);
     }
 
     private boolean isWarning = false;

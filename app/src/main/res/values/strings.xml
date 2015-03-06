@@ -25,9 +25,12 @@
 	<string name="maintab_setting">設定</string>
 
     <string name="chat_default_weather">-</string>
-    <string name="chat_default_uvi">UVI:\n  -</string>
-    <string name="chat_default_psi">PSI:\n  -</string>
-    <string name="chat_default_msv">mSv:\n  -</string>
+    <string name="chat_uvi_label">紫外線指數</string>
+    <string name="chat_psi_label">空氣污染指標</string>
+    <string name="chat_msv_label">輻射劑量</string>
+    <string name="chat_uvi_default">-</string>
+    <string name="chat_psi_default">-</string>
+    <string name="chat_msv_default">-</string>
 	<string name="chat_know_tab">- 附近發生</string>
 	<string name="chat_know_title">附近該注意的事</string>
 	<string name="chat_gotopbar_default">附近景點</string>

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -17,6 +18,11 @@ import java.util.HashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import com.facebook.FacebookRequestError;
 import com.facebook.Request;
@@ -46,6 +52,10 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.os.AsyncTask;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 public class KnowManager {
 	private static final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?lat=%f&lon=%f&lang=zh_tw";
@@ -142,6 +152,7 @@ public class KnowManager {
         updateUVI();
         updatePSI();
         updateMSV();
+        updateAlert();
 	}
 	
 	public void updateDistance() {
@@ -386,6 +397,16 @@ public class KnowManager {
 			try {
                 if (params[1].equals("JSON"))
     				return parser.parse(loadHtml(params[0], encoding));
+                else if (params[1].equals("XML")) {
+                    String xmlRecords = loadHtml(params[0], encoding);
+                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                    try {
+                        DocumentBuilder builder = factory.newDocumentBuilder();
+                        return builder.parse(new InputSource(new StringReader(xmlRecords)));
+                    } catch (ParserConfigurationException | SAXException e) {
+                        e.printStackTrace();
+                    }
+                }
                 else
                     return loadHtml(params[0], encoding);
 			} catch (JsonSyntaxException e) {
@@ -600,6 +621,52 @@ public class KnowManager {
         void onChanged(JsonObject array);
     }
 
+    private static final String ALERT_URL = "http://opendata.cwb.gov.tw/opendata/MFC/W-C0033-002.xml";
+    private ArrayList<OnAlertChangedListener> alertListeners = new ArrayList<OnAlertChangedListener>();
+    private static final int ALERT_UPDATE_INTERVAL = 60000;
+    private long alertUpdate;
+    private boolean alertUpdating;
+    private JsonObject alertData;
+    private void alertNotification() {
+        for (OnAlertChangedListener listener : alertListeners) {
+            listener.onChanged(alertData);
+        }
+    }
+    public JsonObject getAlert() {
+        if (alertUpdate + ALERT_UPDATE_INTERVAL > System.currentTimeMillis())
+            return alertData;
+        //updateAlert();
+        return alertData;
+    }
+    public void updateAlert() {
+        Location loc = getLocation();
+        if (loc == null)
+            return;
+        if (alertUpdating)
+            return;
+        alertUpdating = true;
+
+        new LoadWebTask() {
+            protected void onPostExecute(Object result) {
+                Document data = (Document)result;
+                NodeList cwbData = data.getElementsByTagName("cwbopendata").item(0).getChildNodes();
+                alertData = new JsonObject();
+                alertData.addProperty("alert", (cwbData.getLength()>=6));
+
+                alertUpdate = System.currentTimeMillis();
+                alertNotification();
+                alertUpdating = false;
+
+            }
+        }.execute(ALERT_URL, "XML");
+    }
+    public void setOnAlertChangedListener(OnAlertChangedListener listener) {
+        if (alertListeners.contains(listener) == false)
+            alertListeners.add(listener);
+    }
+    public interface OnAlertChangedListener  extends EventListener {
+        void onChanged(JsonObject array);
+    }
 
     public static boolean compareLocTWD97(Location mLoc, JsonObject o1, JsonObject o2) {
         double lat1 = Double.parseDouble(o1.get("TWD97Lat").getAsString());

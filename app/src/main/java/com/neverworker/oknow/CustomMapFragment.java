@@ -147,35 +147,38 @@ public class CustomMapFragment extends Fragment {
 		}
 
         if (refugeeData == null) {
-            try {
-                InputStream is = thisActivity.getAssets().open("embedData/refugee.json");
-                refugeeData = new JsonParser().parse(FileManager.ReadInputStreamToStr(is, "UTF-8")).getAsJsonArray();
-                nearRefugeeData.clear();
-                for (JsonElement oriJEle : refugeeData) {
-                    JsonObject newJObj = oriJEle.getAsJsonObject();
-                    if (!newJObj.has("location"))
-                        continue;
-                    if (nearRefugeeData.size() < 10) {
-                        nearRefugeeData.add(newJObj);
-                    } else {
-                        int fixIndex = -1;
-                        for (JsonObject oriJObj : nearRefugeeData) {
-                            if (KnowManager.compareLocLatLngL(thisActivity.getKnowManager().getLocation(),
-                                    newJObj.get("location").getAsJsonObject(),
-                                    oriJObj.get("location").getAsJsonObject())) {
-                                fixIndex = nearRefugeeData.indexOf(oriJObj);
-                                break;
+            Location mLoc = thisActivity.getKnowManager().getLocation();
+            if (mLoc != null) {
+                try {
+                    InputStream is = thisActivity.getAssets().open("embedData/refugee.json");
+                    refugeeData = new JsonParser().parse(FileManager.ReadInputStreamToStr(is, "UTF-8")).getAsJsonArray();
+                    nearRefugeeData.clear();
+                    for (JsonElement oriJEle : refugeeData) {
+                        JsonObject newJObj = oriJEle.getAsJsonObject();
+                        if (!newJObj.has("location"))
+                            continue;
+                        if (nearRefugeeData.size() < 10) {
+                            nearRefugeeData.add(newJObj);
+                        } else {
+                            int fixIndex = -1;
+                            for (JsonObject oriJObj : nearRefugeeData) {
+                                if (KnowManager.compareLocLatLngL(thisActivity.getKnowManager().getLocation(),
+                                        newJObj.get("location").getAsJsonObject(),
+                                        oriJObj.get("location").getAsJsonObject())) {
+                                    fixIndex = nearRefugeeData.indexOf(oriJObj);
+                                    break;
+                                }
                             }
-                        }
-                        if (fixIndex != -1) {
-                            nearRefugeeData.remove(fixIndex);
-                            nearRefugeeData.add(fixIndex, newJObj);
-                        }
+                            if (fixIndex != -1) {
+                                nearRefugeeData.remove(fixIndex);
+                                nearRefugeeData.add(fixIndex, newJObj);
+                            }
 
+                        }
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
         updateRefugeeList(nearRefugeeData);
